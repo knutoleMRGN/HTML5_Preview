@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>HTML Preview — Morgenstern</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f8;
+    --card: #ffffff;
+    --text: #0a0a0a;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --border: #e5e7eb;
+    --border-2: #d1d5db;
+    --border-dashed: #c7cad1;
+    --accent: #ef4444;
+    --accent-soft: rgba(239, 68, 68, 0.08);
+    --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 1px rgba(15, 23, 42, 0.03);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  [data-theme="dark"] {
+    --bg: #0a0a0a;
+    --card: #141414;
+    --text: #ededed;
+    --text-2: #9ca3af;
+    --text-3: #6b7280;
+    --border: #222222;
+    --border-2: #2a2a2a;
+    --border-dashed: #2f2f2f;
+    --accent: #ef4444;
+    --accent-soft: rgba(239, 68, 68, 0.12);
+    --shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-font-smoothing: antialiased; transition: background-color 0.2s, color 0.2s; }
+  button { font-family: inherit; cursor: pointer; }
+  input[type="file"] { display: none; }
+
+  /* Layout */
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    padding: 20px;
+    min-height: 100vh;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: background-color 0.2s;
+  }
+
+  /* Sidebar */
+  .sidebar { padding: 32px 28px; }
+  .sidebar-headline {
+    margin: 0 0 24px;
+    font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    color: var(--text);
+  }
+  .sidebar-headline em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  /* Logo (now in topbar) */
+  .topbar-logo { flex: 1; min-width: 0; }
+  .logo {
+    height: 55px;
+    width: 100%;
+    object-fit: contain;
+    object-position: left center;
+    display: block;
+  }
+  .topbar-brand { display: flex; align-items: center; gap: 14px; }
+  .dropzone {
+    border: 1.5px dashed var(--border-dashed);
+    border-radius: var(--radius-sm);
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: block;
+  }
+  .dropzone:hover { border-color: var(--text-3); background: rgba(0,0,0,0.015); }
+  [data-theme="dark"] .dropzone:hover { background: rgba(255,255,255,0.02); }
+  .dropzone.drag {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .dropzone-icon {
+    width: 28px; height: 28px;
+    margin: 0 auto 14px;
+    color: var(--text-2);
+  }
+  .dropzone h2 {
+    margin: 0 0 6px;
+    font-size: 14px; font-weight: 500;
+    color: var(--text);
+  }
+  .dropzone p {
+    margin: 0 0 18px;
+    font-size: 12px; color: var(--text-2);
+  }
+  .pick-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 500;
+    box-shadow: var(--shadow);
+  }
+  .pick-btn:hover { border-color: var(--border-2); }
+  .pick-btn svg { width: 14px; height: 14px; }
+
+  .helper {
+    margin-top: 18px;
+    font-size: 11px; line-height: 1.5;
+    color: var(--text-3);
+  }
+
+  /* Main / preview area */
+  .main {
+    display: flex; flex-direction: column; gap: 16px;
+    min-height: 100vh;
+  }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 28px;
+    gap: 16px;
+  }
+  .topbar h1 {
+    margin: 0;
+    font-size: 16px; font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .topbar-actions { display: flex; gap: 6px; align-items: center; }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    background: transparent; color: var(--text-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: grid; place-items: center;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--border-2); background: var(--bg); }
+  .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .icon-btn svg { width: 14px; height: 14px; }
+
+  .preview-area {
+    flex: 1;
+    border: 1.5px dashed var(--border-dashed);
+    border-radius: var(--radius);
+    padding: 24px;
+    min-height: 540px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+  .preview-area.has-banners {
+    align-items: flex-start;
+    justify-content: flex-start;
+    border-style: solid;
+    border-color: var(--border);
+    background: var(--card);
+  }
+
+  .empty {
+    text-align: center; color: var(--text-2);
+    padding: 24px;
+  }
+  .empty-icon {
+    width: 48px; height: 48px; margin: 0 auto 14px;
+    color: var(--text-3); opacity: 0.5;
+  }
+  .empty h3 { margin: 0 0 6px; font-size: 14px; font-weight: 500; color: var(--text); }
+  .empty p { margin: 0; font-size: 12px; color: var(--text-2); }
+
+  /* Banner stack */
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .banner {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .banner:hover { border-color: var(--border-2); }
+  .banner.error { border-color: rgba(239, 68, 68, 0.4); }
+
+  .banner-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .banner-meta { min-width: 0; flex: 1; }
+  .banner-name {
+    font-size: 12px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .banner-info {
+    display: flex; gap: 6px; align-items: center;
+    font-size: 10px; color: var(--text-2);
+    margin-top: 2px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  .badge-size {
+    background: var(--accent); color: #fff;
+    padding: 2px 6px; border-radius: 3px;
+    font-weight: 600; font-size: 10px;
+    border: 0; cursor: pointer;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    transition: filter 0.1s;
+  }
+  .badge-size:hover { filter: brightness(1.1); }
+  .src-tag {
+    color: var(--text-3); font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .banner-actions { display: flex; gap: 2px; }
+  .banner-actions .icon-btn {
+    width: 26px; height: 26px;
+    border-color: transparent;
+  }
+  .banner-actions .icon-btn:hover { border-color: var(--border); }
+  .banner-actions .icon-btn svg { width: 12px; height: 12px; }
+  .banner-actions .danger:hover { color: var(--accent); border-color: var(--accent); }
+
+  .banner-stage {
+    background:
+      linear-gradient(45deg, rgba(0,0,0,0.04) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(0,0,0,0.04) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.04) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.04) 75%);
+    background-size: 14px 14px;
+    background-position: 0 0, 0 7px, 7px -7px, 7px 0px;
+    background-color: #fafafa;
+    overflow: auto;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 16px;
+    min-height: 100px;
+    max-height: 70vh;
+  }
+  [data-theme="dark"] .banner-stage {
+    background-color: #0d0d0d;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.03) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.03) 75%);
+  }
+  .banner-stage iframe {
+    border: 0;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    display: block;
+  }
+
+  .banner-error {
+    padding: 16px; color: var(--accent); font-size: 12px;
+    text-align: center; line-height: 1.5;
+  }
+
+  /* Toolbar above grid */
+  .grid-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; margin-bottom: 14px;
+    font-size: 12px; color: var(--text-2);
+  }
+  .grid-toolbar strong { color: var(--text); font-weight: 600; }
+  .grid-toolbar-actions { display: flex; gap: 6px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--card);
+    padding: 10px 16px; border-radius: 8px;
+    font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+</style>
+</head>
+<body data-theme="light">
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="card sidebar">
+    <h2 class="sidebar-headline">Last opp <em>zip-filer</em> for å se forhåndsvisning</h2>
+
+    <label class="dropzone" id="dropzone" for="file-input">
+      <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <h2>Dra &amp; slipp ZIP-filer her</h2>
+      <p>eller klikk for å bla gjennom</p>
+      <span class="pick-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Velg filer
+      </span>
+      <input type="file" id="file-input" multiple accept=".zip,application/zip" />
+    </label>
+
+    <p class="helper">
+      Hver ZIP må inneholde en HTML-fil og tilhørende ressurser.
+      
+    </p>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="card topbar">
+      <div class="topbar-logo">
+        <img class="logo" src="Artboard 1@3x.png" alt="Morgenstern" />
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="reload-all" disabled title="Spill av alle på nytt">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="icon-btn" id="clear-all" disabled title="Tøm alle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+        <button class="icon-btn" id="theme-toggle" title="Bytt tema">
+          <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="preview-area" id="preview-area">
+      <div class="empty" id="empty">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        <h3>Ingen formater lastet opp</h3>
+      </div>
+      <div class="grid-wrap" id="grid-wrap" style="display:none; width:100%;">
+        <div class="grid-toolbar">
+          <span id="count"><strong>0</strong> formater</span>
+        </div>
+        <div class="grid" id="grid"></div>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="error-overlay" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);max-width:90vw;background:#fee;border:1px solid #f99;color:#900;padding:14px 18px;border-radius:8px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:1.5;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.15);white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow:auto;"></div>
+
+<script>
+window.addEventListener('error', function (e) {
+  var box = document.getElementById('error-overlay');
+  if (!box) return;
+  box.style.display = 'block';
+  box.textContent = '⚠ ' + (e.message || 'Ukjent feil') + '\n\n' + (e.filename ? e.filename + ':' + e.lineno + ':' + e.colno : '') + (e.error && e.error.stack ? '\n\n' + e.error.stack : '');
+});
+window.addEventListener('unhandledrejection', function (e) {
+  var box = document.getElementById('error-overlay');
+  if (!box) return;
+  box.style.display = 'block';
+  var r = e.reason;
+  box.textContent = '⚠ Promise rejected\n\n' + (r && r.message ? r.message : String(r)) + (r && r.stack ? '\n\n' + r.stack : '');
+});
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ───────── State ─────────
+  var banners = new Map();
+  var bannerCounter = 0;
+
+  // ───────── DOM ─────────
+  var dropzone   = document.getElementById('dropzone');
+  var fileInput  = document.getElementById('file-input');
+  var previewArea= document.getElementById('preview-area');
+  var emptyEl    = document.getElementById('empty');
+  var gridWrap   = document.getElementById('grid-wrap');
+  var grid       = document.getElementById('grid');
+  var countEl    = document.getElementById('count');
+  var clearBtn   = document.getElementById('clear-all');
+  var reloadBtn  = document.getElementById('reload-all');
+  var themeBtn   = document.getElementById('theme-toggle');
+  var themeIcon  = document.getElementById('theme-icon');
+  var toastEl    = document.getElementById('toast');
+
+  // ───────── Theme ─────────
+  var moonPath = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  var sunPath  = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+
+  function applyTheme(t) {
+    document.body.setAttribute('data-theme', t);
+    themeIcon.innerHTML = t === 'dark' ? sunPath : moonPath;
+    try { localStorage.setItem('mrgn-preview-theme', t); } catch (e) {}
+  }
+  var savedTheme = 'light';
+  try { savedTheme = localStorage.getItem('mrgn-preview-theme') || 'light'; } catch (e) {}
+  applyTheme(savedTheme);
+  themeBtn.addEventListener('click', function () {
+    applyTheme(document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  // ───────── Utils ─────────
+  function showToast(msg, ms) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () { toastEl.classList.remove('show'); }, ms || 2200);
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function updateCount() {
+    var n = banners.size;
+    countEl.innerHTML = '<strong>' + n + '</strong> format' + (n === 1 ? '' : 'er');
+    clearBtn.disabled = n === 0;
+    reloadBtn.disabled = n === 0;
+    if (n === 0) {
+      emptyEl.style.display = 'block';
+      gridWrap.style.display = 'none';
+      previewArea.classList.remove('has-banners');
+    } else {
+      emptyEl.style.display = 'none';
+      gridWrap.style.display = 'block';
+      previewArea.classList.add('has-banners');
+    }
+  }
+
+  // ───────── Drop handlers ─────────
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.add('drag');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    dropzone.addEventListener(ev, function (e) {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.remove('drag');
+    });
+  });
+  dropzone.addEventListener('drop', function (e) { handleFiles(e.dataTransfer.files); });
+  fileInput.addEventListener('change', function (e) { handleFiles(e.target.files); });
+
+  // Accept drops anywhere
+  ['dragover', 'drop'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      if (dropzone.contains(e.target)) return;
+      e.preventDefault();
+      if (ev === 'drop' && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleFiles(e.dataTransfer.files);
+      }
+    });
+  });
+
+  // ───────── File handling ─────────
+  function handleFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList || []).filter(function (f) {
+      return f && (f.name.toLowerCase().endsWith('.zip') || f.type === 'application/zip');
+    });
+    if (!files.length) {
+      showToast('Bare .zip-filer er støttet');
+      return;
+    }
+    files.reduce(function (p, f) {
+      return p.then(function () { return loadZip(f).catch(function (err) {
+        console.error('Feil i', f.name, err);
+        showToast('Klarte ikke å lese ' + f.name);
+      }); });
+    }, Promise.resolve()).then(function () {
+      fileInput.value = '';
+    });
+  }
+
+  function blobToDataUri(blob) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(r.result); };
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function textToDataUri(text, mime) {
+    // Encode as UTF-8 base64 — robust against any character via Blob+FileReader
+    return blobToDataUri(new Blob([text], { type: mime }));
+  }
+
+  function loadZip(file) {
+    return file.arrayBuffer().then(function (buf) {
+      return JSZip.loadAsync(buf);
+    }).then(function (zip) {
+      var filePaths = Object.keys(zip.files).filter(function (p) { return !zip.files[p].dir; });
+      var htmlPath = filePaths.find(function (p) { return /(^|\/)index\.html?$/i.test(p); });
+      if (!htmlPath) htmlPath = filePaths.find(function (p) { return /\.html?$/i.test(p); });
+      if (!htmlPath) throw new Error('Ingen HTML-fil i zip');
+
+      // assetUrls: relativePath → data: URI (or inline marker for text)
+      var assetUrls = new Map();
+      var fileContents = new Map();
+
+      var loadAll = filePaths.map(function (path) {
+        var f = zip.files[path];
+        var ext = (path.split('.').pop() || '').toLowerCase();
+        var isText = ['html','htm','css','js','json','txt','xml'].indexOf(ext) >= 0;
+        if (isText) {
+          return f.async('string').then(function (text) {
+            fileContents.set(path, { kind: 'text', value: text, ext: ext });
+          });
+        } else {
+          // SVG: keep both as text (for inlining) AND data URI (for img src)
+          if (ext === 'svg') {
+            return f.async('string').then(function (text) {
+              fileContents.set(path, { kind: 'text', value: text, ext: ext });
+              return textToDataUri(text, 'image/svg+xml').then(function (uri) { assetUrls.set(path, uri); });
+            });
+          }
+          return f.async('blob').then(function (blob) {
+            var typed = new Blob([blob], { type: mimeFor(ext) });
+            return blobToDataUri(typed).then(function (dataUri) {
+              assetUrls.set(path, dataUri);
+              fileContents.set(path, { kind: 'binary', url: dataUri, ext: ext });
+            });
+          });
+        }
+      });
+
+      return Promise.all(loadAll).then(function () {
+        // Rewrite CSS files: url() → data URIs, then turn the file into a data URI itself
+        var cssTasks = [];
+        fileContents.forEach(function (entry, path) {
+          if (entry.kind === 'text' && entry.ext === 'css') {
+            var dir = path.replace(/[^/]+$/, '');
+            var rewritten = rewriteCss(entry.value, dir, assetUrls);
+            entry.rewritten = rewritten;
+            cssTasks.push(textToDataUri(rewritten, 'text/css').then(function (uri) {
+              assetUrls.set(path, uri);
+            }));
+          }
+        });
+        return Promise.all(cssTasks);
+      }).then(function () {
+        var htmlEntry = fileContents.get(htmlPath);
+        var html = htmlEntry.value;
+        var htmlDir = htmlPath.replace(/[^/]+$/, '');
+        var size = detectSize(html, file.name);
+        var bannerId = ++bannerCounter;
+        html = rewriteHtml(html, htmlDir, fileContents, assetUrls);
+        html = injectClickHandler(html, bannerId);
+
+        addBanner({
+          id: bannerId,
+          name: file.name.replace(/\.zip$/i, ''),
+          size: file.size,
+          w: size.w, h: size.h,
+          src: size.src,
+          pending: !!size.pending,
+          html: html,
+          assetUrls: assetUrls
+        });
+      });
+    });
+  }
+
+  function mimeFor(ext) {
+    var m = {
+      png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+      webp:'image/webp', svg:'image/svg+xml', ico:'image/x-icon',
+      mp4:'video/mp4', webm:'video/webm', mp3:'audio/mpeg', wav:'audio/wav',
+      woff:'font/woff', woff2:'font/woff2', ttf:'font/ttf', otf:'font/otf',
+      eot:'application/vnd.ms-fontobject',
+      json:'application/json', xml:'application/xml',
+      js:'application/javascript', css:'text/css', html:'text/html'
+    };
+    return m[ext] || 'application/octet-stream';
+  }
+
+  // Standard IAB display ad sizes — preferred when matching ambiguous CSS rules
+  var IAB_SIZES = [
+    [300,250],[336,280],[728,90],[970,90],[970,250],[300,600],[160,600],[120,600],
+    [320,50],[320,100],[300,50],[468,60],[234,60],[120,240],[125,125],
+    [980,300],[980,400],[980,600],[980,250],[980,500],[930,180],[750,200],[750,300],
+    [580,400],[200,200],[250,250],[240,400],[300,1050],[970,550],
+    [320,480],[480,320],[300,300],[300,400],[300,500],[1080,1920],[1920,1080]
+  ];
+  function isIab(w, h) {
+    for (var i = 0; i < IAB_SIZES.length; i++) {
+      if (IAB_SIZES[i][0] === w && IAB_SIZES[i][1] === h) return true;
+    }
+    return false;
+  }
+
+  function detectSize(html, filename) {
+    // 1. Meta ad.size — most reliable
+    var meta = html.match(/<meta[^>]+name=["']ad\.size["'][^>]+content=["']([^"']+)["']/i);
+    if (meta) {
+      var w1 = meta[1].match(/width\s*=\s*(\d+)/i);
+      var h1 = meta[1].match(/height\s*=\s*(\d+)/i);
+      if (w1 && h1) return { w: +w1[1], h: +h1[1], src: 'meta' };
+    }
+
+    // 2. Filename pattern (300x250, 980_600 etc.)
+    var fn = filename.match(/(\d{2,4})[x_×](\d{2,4})/i);
+    if (fn) {
+      var fw = +fn[1], fh = +fn[2];
+      if (fw >= 50 && fh >= 50) return { w: fw, h: fh, src: 'filename' };
+    }
+
+    // 3. Body inline width/height attributes
+    var bw = html.match(/<body[^>]+width=["']?(\d+)/i);
+    var bh = html.match(/<body[^>]+height=["']?(\d+)/i);
+    if (bw && bh) return { w: +bw[1], h: +bh[1], src: 'body-attr' };
+
+    // 4. Body inline style="width:980px;height:600px"
+    var bodyStyle = html.match(/<body[^>]+style=["']([^"']+)["']/i);
+    if (bodyStyle) {
+      var sw = bodyStyle[1].match(/width\s*:\s*(\d+)\s*px/i);
+      var sh = bodyStyle[1].match(/height\s*:\s*(\d+)\s*px/i);
+      if (sw && sh) return { w: +sw[1], h: +sh[1], src: 'body-style' };
+    }
+
+    // 5. Canvas tag (HTML5 ads, GWD with canvas)
+    var canvas = html.match(/<canvas[^>]+width=["']?(\d+)["']?[^>]+height=["']?(\d+)/i);
+    if (canvas) return { w: +canvas[1], h: +canvas[2], src: 'canvas' };
+
+    // 6. Scan all CSS rule blocks for width/height pairs
+    var candidates = collectCssDimensionPairs(html);
+
+    // Prefer pairs that match an IAB standard size
+    for (var i = 0; i < candidates.length; i++) {
+      if (isIab(candidates[i].w, candidates[i].h)) return { w: candidates[i].w, h: candidates[i].h, src: 'css-iab' };
+    }
+
+    // 7. Prefer body/html selectors over arbitrary classes
+    for (var j = 0; j < candidates.length; j++) {
+      if (/^(body|html|#stage|\.stage|#ad|\.ad|#banner|\.banner|#main|#container|\.container)\b/i.test(candidates[j].selector)) {
+        return { w: candidates[j].w, h: candidates[j].h, src: 'css-selector' };
+      }
+    }
+
+    // 8. Largest reasonable pair as last guess (banners are usually the biggest sized box)
+    if (candidates.length) {
+      candidates.sort(function (a, b) { return (b.w * b.h) - (a.w * a.h); });
+      var c = candidates[0];
+      if (c.w >= 50 && c.h >= 50 && c.w <= 3000 && c.h <= 3000) {
+        return { w: c.w, h: c.h, src: 'css-largest' };
+      }
+    }
+
+    // 9. Pending — will be measured live in the iframe after load
+    return { w: 300, h: 250, src: 'fallback', pending: true };
+  }
+
+  function collectCssDimensionPairs(html) {
+    // Strip comments
+    var clean = html.replace(/\/\*[\s\S]*?\*\//g, '');
+    var pairs = [];
+    // Match: selector { ...width:Xpx... height:Ypx... }
+    var rule = /([^{}@]+)\{([^{}]+)\}/g;
+    var m;
+    while ((m = rule.exec(clean)) !== null) {
+      var selector = (m[1] || '').trim();
+      var body = m[2];
+      var w = body.match(/(?:^|[^a-z-])width\s*:\s*(\d+)\s*px/i);
+      var h = body.match(/(?:^|[^a-z-])height\s*:\s*(\d+)\s*px/i);
+      if (w && h) {
+        var ww = +w[1], hh = +h[1];
+        if (ww >= 50 && hh >= 50 && ww <= 3000 && hh <= 3000) {
+          pairs.push({ selector: selector, w: ww, h: hh });
+        }
+      }
+    }
+    return pairs;
+  }
+
+  function resolvePath(dir, ref) {
+    if (!ref) return null;
+    if (/^(https?:|data:|blob:|mailto:|javascript:|#)/i.test(ref)) return null;
+    var clean = ref.split(/[?#]/)[0];
+    if (!clean) return null;
+    var parts = (dir + clean).split('/');
+    var out = [];
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      if (p === '' || p === '.') continue;
+      if (p === '..') out.pop();
+      else out.push(p);
+    }
+    return out.join('/');
+  }
+
+  function rewriteHtml(html, htmlDir, fileContents, assetUrls) {
+    // 1. Inline local <link rel="stylesheet" href="x.css"> as <style>
+    html = html.replace(/<link\b([^>]*?)href\s*=\s*(["'])([^"']+)\2([^>]*)>/gi, function (m, pre, q, ref, post) {
+      // Skip if not stylesheet
+      var attrs = pre + post;
+      if (/rel\s*=\s*(["'])(?!stylesheet)/i.test(attrs) && !/rel\s*=\s*(["'])stylesheet/i.test(attrs)) return m;
+      if (!/rel\s*=\s*(["'])stylesheet/i.test(attrs)) return m;
+      var path = resolvePath(htmlDir, ref);
+      if (!path) return m;
+      var entry = fileContents.get(path);
+      if (entry && entry.kind === 'text' && entry.ext === 'css') {
+        return '<style>' + (entry.rewritten || entry.value) + '</style>';
+      }
+      return m;
+    });
+
+    // 2. Inline local script tags that point to local JS files
+    html = html.replace(/<script\b([^>]*?)src\s*=\s*(["'])([^"']+)\2([^>]*)>\s*<\/script>/gi, function (m, pre, q, ref, post) {
+      var path = resolvePath(htmlDir, ref);
+      if (!path) return m;
+      var entry = fileContents.get(path);
+      if (entry && entry.kind === 'text' && entry.ext === 'js') {
+        return '<script' + pre + post + '>\n' + entry.value + '\n<\/script>';
+      }
+      return m;
+    });
+
+    // 3. Replace remaining src/href/poster/data-src with data: URIs
+    html = html.replace(/(\s(?:src|href|poster|data-src|srcset)\s*=\s*)(["'])([^"']+)\2/gi, function (m, pre, q, ref) {
+      var path = resolvePath(htmlDir, ref);
+      if (!path) return m;
+      if (assetUrls.has(path)) return pre + q + assetUrls.get(path) + q;
+      return m;
+    });
+
+    // 4. Rewrite url() inside inline <style> blocks
+    html = html.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, function (m, css) {
+      return m.replace(css, rewriteCss(css, htmlDir, assetUrls));
+    });
+
+    // 5. Rewrite url() inside style="…" attributes
+    html = html.replace(/style\s*=\s*(["'])([^"']*)\1/gi, function (m, q, css) {
+      return 'style=' + q + rewriteCss(css, htmlDir, assetUrls) + q;
+    });
+
+    return html;
+  }
+
+  function rewriteCss(css, cssDir, assetUrls) {
+    return css.replace(/url\(\s*(['"]?)([^)'"]+)\1\s*\)/gi, function (m, q, ref) {
+      if (/^(https?:|data:|blob:|#)/i.test(ref)) return m;
+      var path = resolvePath(cssDir, ref);
+      if (path && assetUrls.has(path)) return 'url(' + q + assetUrls.get(path) + q + ')';
+      return m;
+    });
+  }
+
+  function injectClickHandler(html, bannerId) {
+    var script =
+      '<script>(function(){' +
+        'var ID=' + bannerId + ';' +
+        'window.clickTag=window.clickTag||"";' +
+        // Click interceptor
+        'document.addEventListener("click",function(e){' +
+          'var a=e.target.closest&&e.target.closest("a");' +
+          'if(a){e.preventDefault();var href=a.getAttribute("href")||window.clickTag;' +
+          'if(href&&/^https?:/i.test(href)){try{window.parent.postMessage({type:"banner-click",id:ID,href:href},"*");}catch(_){}}}' +
+        '},true);' +
+        // Measure rendered size: find the actual sized banner element
+        'function measure(){' +
+          'try{' +
+            'var b=document.body; if(!b) return;' +
+            'var vw=window.innerWidth, vh=window.innerHeight;' +
+            'var w=0, h=0, src="body";' +
+            // Try body computed dimensions
+            'var bcs=getComputedStyle(b);' +
+            'var bw=parseInt(bcs.width,10), bh=parseInt(bcs.height,10);' +
+            'var bodyIsViewport=(bw>=vw-2&&bh>=vh-2);' +
+            'if(bw>=50&&bh>=50&&bw<=3000&&bh<=3000&&!bodyIsViewport){w=bw;h=bh;}' +
+            // If body fills viewport, look at first child div with explicit dimensions
+            'if(!w){' +
+              'var children=b.children, biggest=null;' +
+              'for(var i=0;i<children.length;i++){' +
+                'var c=children[i]; if(!c.tagName) continue;' +
+                'var tag=c.tagName.toLowerCase();' +
+                'if(tag==="script"||tag==="style"||tag==="link"||tag==="meta") continue;' +
+                'var r=c.getBoundingClientRect();' +
+                'if(r.width>=50&&r.height>=50&&r.width<=3000&&r.height<=3000){' +
+                  'if(!biggest||(r.width*r.height)>(biggest.w*biggest.h)){' +
+                    'biggest={w:Math.round(r.width), h:Math.round(r.height)};' +
+                  '}' +
+                '}' +
+              '}' +
+              'if(biggest){w=biggest.w; h=biggest.h; src="child";}' +
+            '}' +
+            // Last resort: scrollWidth/Height
+            'if(!w){' +
+              'var d=document.documentElement;' +
+              'w=Math.max(d.scrollWidth, b.scrollWidth);' +
+              'h=Math.max(d.scrollHeight, b.scrollHeight);' +
+              'src="scroll";' +
+            '}' +
+            'window.parent.postMessage({type:"banner-size",id:ID,w:w,h:h,how:src},"*");' +
+          '}catch(err){' +
+            'try{window.parent.postMessage({type:"banner-error",id:ID,msg:String(err)},"*");}catch(_){}' +
+          '}' +
+        '}' +
+        // Measure on load, and again after a short delay to catch late layout
+        'function schedule(){setTimeout(measure,50); setTimeout(measure,400);}' +
+        'if(document.readyState==="complete"){schedule();}' +
+        'else{window.addEventListener("load",schedule);}' +
+      '})();<\/script>';
+    if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, function (m) { return m + script; });
+    return script + html;
+  }
+
+  // ───────── Render banner ─────────
+  function addBanner(data) {
+    var card = document.createElement('div');
+    card.className = 'banner';
+    card.dataset.id = data.id;
+
+    var head = document.createElement('div');
+    head.className = 'banner-head';
+    head.innerHTML =
+      '<div class="banner-meta">' +
+        '<div class="banner-name" title="' + escapeHtml(data.name) + '">' + escapeHtml(data.name) + '</div>' +
+        '<div class="banner-info">' +
+          '<button class="badge-size" data-act="resize" title="Klikk for å overstyre dimensjoner">' + data.w + '×' + data.h + '</button>' +
+          '<span class="src-tag" title="Kilde: ' + (data.src || '?') + '">' + (data.pending ? 'måles…' : (data.src || '')) + '</span>' +
+          '<span>' + formatBytes(data.size) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="banner-actions">' +
+        '<button class="icon-btn" data-act="reload" title="Spill av på nytt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>' +
+        '<button class="icon-btn" data-act="popout" title="Åpne i nytt vindu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>' +
+        '<button class="icon-btn danger" data-act="remove" title="Fjern"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+      '</div>';
+
+    var stage = document.createElement('div');
+    stage.className = 'banner-stage';
+    var iframe = document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+    // Render at generous size first so content can lay out naturally,
+    // then resize after measurement message arrives.
+    iframe.width = 2000;
+    iframe.height = 2000;
+    iframe.style.opacity = '0';
+    iframe.style.transition = 'opacity 0.15s';
+    iframe.srcdoc = data.html;
+    stage.appendChild(iframe);
+
+    // Fallback: if no measurement arrives within 1.2s, fall back to detected size
+    setTimeout(function () {
+      if (iframe.style.opacity === '0') {
+        iframe.width = data.w;
+        iframe.height = data.h;
+        iframe.style.opacity = '1';
+      }
+    }, 1200);
+
+    card.appendChild(head);
+    card.appendChild(stage);
+    grid.prepend(card);
+
+    banners.set(data.id, { data: data, card: card, iframe: iframe });
+    updateCount();
+
+    head.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      var act = btn.dataset.act;
+      if (act === 'reload') {
+        iframe.srcdoc = data.html;
+      } else if (act === 'resize') {
+        var current = data.w + 'x' + data.h;
+        var input = prompt('Sett dimensjoner (eks. 980x600):', current);
+        if (!input) return;
+        var parsed = input.match(/(\d+)\s*[x×*,\s]\s*(\d+)/i);
+        if (!parsed) { showToast('Ugyldig format'); return; }
+        applyBannerSize(data.id, +parsed[1], +parsed[2], 'manuell');
+      } else if (act === 'popout') {
+        var win = window.open('', '_blank', 'width=' + (data.w + 40) + ',height=' + (data.h + 80));
+        if (win) {
+          win.document.open();
+          win.document.write(data.html);
+          win.document.close();
+        }
+      } else if (act === 'remove') {
+        card.remove();
+        banners.delete(data.id);
+        updateCount();
+      }
+    });
+  }
+
+  function applyBannerSize(id, w, h, src) {
+    var b = banners.get(id);
+    if (!b) return;
+    b.data.w = w; b.data.h = h; b.data.src = src; b.data.pending = false;
+    b.iframe.width = w; b.iframe.height = h;
+    var badge = b.card.querySelector('.badge-size');
+    if (badge) badge.textContent = w + '×' + h;
+    var srcTag = b.card.querySelector('.src-tag');
+    if (srcTag) { srcTag.textContent = src; srcTag.title = 'Kilde: ' + src; }
+  }
+
+  // ───────── Toolbar ─────────
+  clearBtn.addEventListener('click', function () {
+    if (!banners.size) return;
+    if (!confirm('Fjerne alle ' + banners.size + ' formater?')) return;
+    banners.forEach(function (b) { b.card.remove(); });
+    banners.clear();
+    updateCount();
+  });
+
+  reloadBtn.addEventListener('click', function () {
+    banners.forEach(function (b) { b.iframe.srcdoc = b.data.html; });
+    showToast('Spiller av alle på nytt');
+  });
+
+  // Banner messages from iframe
+  window.addEventListener('message', function (e) {
+    if (!e.data || !e.data.type) return;
+    if (e.data.type === 'banner-click' && e.data.href) {
+      showToast('Klikk → ' + e.data.href);
+    } else if (e.data.type === 'banner-size') {
+      var b = banners.get(e.data.id);
+      if (!b) return;
+      var mw = e.data.w, mh = e.data.h;
+      if (mw < 50 || mh < 50 || mw > 3000 || mh > 3000) return;
+      var srcLabel = 'målt' + (e.data.how ? ' (' + e.data.how + ')' : '');
+      // Always trust measurement — it's the rendered truth
+      applyBannerSize(e.data.id, mw, mh, srcLabel);
+      // Reveal iframe now that we've sized it
+      b.iframe.style.opacity = '1';
+    } else if (e.data.type === 'banner-error') {
+      console.error('Banner #' + e.data.id + ' feil:', e.data.msg);
+    }
+  });
+
+  updateCount();
+})();
+</script>
+
+</body>
+</html>
