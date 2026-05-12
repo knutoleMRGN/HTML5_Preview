@@ -88,6 +88,20 @@
     display: block;
   }
   .topbar-brand { display: flex; align-items: center; gap: 14px; }
+
+  /* Sidebar illustration */
+  .sidebar-img {
+    display: block;
+    margin: 28px auto 0;
+    width: 325px;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Theme-dependent images */
+  .theme-swap.dark-only { display: none; }
+  [data-theme="dark"] .theme-swap.light-only { display: none; }
+  [data-theme="dark"] .theme-swap.dark-only { display: block; }
   .dropzone {
     border: 1.5px dashed var(--border-dashed);
     border-radius: var(--radius-sm);
@@ -140,8 +154,8 @@
     min-height: 100vh;
   }
   .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 24px 28px;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 14px 18px;
     gap: 16px;
   }
   .topbar h1 {
@@ -328,16 +342,15 @@
 
     <p class="helper">
       Hver ZIP må inneholde en HTML-fil og tilhørende ressurser.
-      
     </p>
+
+    <img class="sidebar-img theme-swap light-only" src="Artboard 6@3x.png" alt="" />
+    <img class="sidebar-img theme-swap dark-only" src="Artboard 6@3xWhite.png" alt="" />
   </aside>
 
   <!-- Main -->
   <main class="main">
     <div class="card topbar">
-      <div class="topbar-logo">
-        <img class="logo" src="Artboard 1@3x.png" alt="Morgenstern" />
-      </div>
       <div class="topbar-actions">
         <button class="icon-btn" id="reload-all" disabled title="Spill av alle på nytt">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
